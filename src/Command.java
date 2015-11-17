@@ -25,7 +25,7 @@ public class Command {
     public static String password;
     public static String host;
     public static boolean doneConnecting = false;
-    public static StringBuilder directory = new StringBuilder("");
+    public static String directory = "";
     public static FTPClient ftpClient = new FTPClient();
 
     public static void Command() { }
@@ -68,6 +68,7 @@ public class Command {
                 System.out.println("Unrecognized command");
         }
     }
+
     private void runOpen(ArrayList<String> args_next) {
         if (args_next.size() < 1) {
             System.out.println("Not enough arguments passed.");
@@ -120,6 +121,7 @@ public class Command {
             ftpclient.requestInput();
         }
     }
+
     private void listRemoteDir() {
         try {
             FTPFile[] files = this.ftpClient.listFiles(this.directory.toString());
@@ -140,17 +142,79 @@ public class Command {
         }
         ftpclient.requestInput();
     }
+
     private void changeRemoteDir(ArrayList<String> args_next) {
         if (args_next.size() < 1) {
             return;
         }
         String change_dir = args_next.get(0);
-        if (!change_dir.substring(change_dir.length() - 2, change_dir.length() - 1).equals("/")) {
-            change_dir = change_dir + "/";
+
+        if (change_dir.indexOf("../") == -1) {
+            Command.directory += change_dir;
+            if (!Command.directory.substring(Command.directory.length() - 2, Command.directory.length() - 1).equals("/")) {
+                Command.directory = Command.directory + "/";
+            }
         }
-        Command.directory.append(change_dir);
+        else {
+
+            Command.directory += change_dir;
+
+            int numberUpFolders = 0;
+            String[] folderArr = Command.directory.split("/", 0);
+            for (int i = 0; i < folderArr.length; i++) {
+                if (folderArr[i].equals("..")) {
+                    numberUpFolders++;
+                }
+            }
+            ArrayList<String> folder_arr_list = new ArrayList<>();
+            for (int i = 0; i < folderArr.length; i++) {
+                folder_arr_list.add(folderArr[i]);
+            }
+            change_dir = "";
+            ArrayList<String> letteredFolders = new ArrayList<>();
+            ArrayList<Integer> indicesToRemove = new ArrayList<>();
+            if (numberUpFolders > 0) {
+                int i = 1;
+                int j = 0;
+                for (j = folder_arr_list.size() - 1; j > -1; j--) {
+                    if (folder_arr_list.get(j).equals("..")) {
+                        indicesToRemove.add(j);
+                    }
+                    else {
+                        if (i <= numberUpFolders) {
+                            indicesToRemove.add(j);
+                            i++;
+                        }
+                    }
+                }
+
+                for (int index2 : indicesToRemove) {
+                    folder_arr_list.remove(index2);
+                }
+                ListIterator folders_itr2 = folder_arr_list.listIterator();
+                while (folders_itr2.hasNext()) {
+                    if (change_dir == "") {
+                        change_dir = folders_itr2.next().toString();
+                    } else {
+                        change_dir += "/" + folders_itr2.next().toString();
+                    }
+                }
+                Command.directory = change_dir;
+                if (Command.directory == "") {
+                    //Command.directory = "/";
+                }
+                else {
+                    if (!Command.directory.substring(Command.directory.length() - 2, Command.directory.length() - 1).equals("/")) {
+                        Command.directory = Command.directory + "/";
+                    }
+                }
+            }
+
+        }
+
         ftpclient.requestInput();
     }
+
     private void connect() {
         if (Command.host.equals("247")) {
             Command.host = "71.40.14.247";
